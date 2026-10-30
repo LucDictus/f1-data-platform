@@ -3,3 +3,13 @@
     version = "0.0.1"
     description = "My f1 data platform"
     authors = [{ name = "LucDictus", email = "lucdictus161@gmail.com" }]
+
+[project.optional-dependencies]
+    dev = ["pytest", "ruff", "responses"]
+
+[tool.ruff]
+    line-length = 100
+    src = ["src"]
+
+[tool.pytest.ini_options]
+    pythonpath = ["src"]

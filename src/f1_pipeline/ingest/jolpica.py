@@ -13,7 +13,7 @@ def fetch_page(session: requests.Session, path: str, limit: int = 100, offset: i
     for attempt in range(5):
         resp = session.get(url, params={"limit": limit, "offset": offset}, timeout=30)
         if resp.status_code == 429:
-            time.sleep(2 ** attempt)  # exponential backoff
+            time.sleep(2**attempt)  # exponential backoff
             continue
         resp.raise_for_status()
         return resp.json()

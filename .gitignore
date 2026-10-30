@@ -7,3 +7,6 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.duckdb
+*.egg-info/
+build/
+dist/

@@ -1,0 +1,5 @@
+[project]
+    name = "f1-data-platform"
+    version = "0.0.1"
+    description = "My f1 data platform"
+    authors = [{ name = "LucDictus", email = "lucdictus161@gmail.com" }]

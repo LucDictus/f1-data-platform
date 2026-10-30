@@ -7,12 +7,14 @@ import requests
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
 RAW_DIR = Path("data/raw")
 
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
 
 def fetch_page(session: requests.Session, path: str, limit: int = 100, offset: int = 0) -> dict:
     url = f"{BASE_URL}/{path}.json"
     for attempt in range(5):
         resp = session.get(url, params={"limit": limit, "offset": offset}, timeout=30)
-        if resp.status_code == 429:
+        if resp.status_code in RETRYABLE_STATUS:
             time.sleep(2**attempt)  # exponential backoff
             continue
         resp.raise_for_status()

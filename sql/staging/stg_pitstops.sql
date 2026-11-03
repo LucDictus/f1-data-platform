@@ -10,6 +10,7 @@ stops AS (
         race.season::INT AS season,
         race.round::INT  AS round,
         race.raceName    AS race_name,
+        race.circuit.circuitID AS circuit_id,
         unnest(race.PitStops) AS p
     FROM races
 )
@@ -17,6 +18,7 @@ SELECT
     season,
     round,
     race_name,
+    circuit_id,
     p.driverId::VARCHAR AS driver_id,
     p.stop::INT         AS stop_number,
     p.lap::INT          AS lap,

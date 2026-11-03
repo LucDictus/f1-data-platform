@@ -29,5 +29,9 @@ SELECT
             TRY_CAST(split_part(p.duration::VARCHAR, ':', 1) AS INT) * 60
             + TRY_CAST(split_part(p.duration::VARCHAR, ':', 2) AS DOUBLE)
         ELSE TRY_CAST(p.duration::VARCHAR AS DOUBLE)
-    END AS duration_s
-FROM stops;
+END AS duration_s
+FROM stops
+-- Dropped: one raw row has an empty duration. A pit stop without a time is
+-- useless for duration analysis, and dropping it keeps duration_s NOT NULL
+-- downstream. Side effect: a gap in stop_number for that driver.
+WHERE p.duration::VARCHAR != '';

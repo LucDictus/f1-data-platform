@@ -79,32 +79,36 @@ The JSON files are written to `data/raw/`. Git ignores this folder.
 | Folder | Schema | What it holds |
 |---|---|---|
 | `sql/staging/` | `staging` | One view per raw source: flatten, cast and rename only |
-| `sql/analyses/` | none | Ad-hoc queries that read from the layers above |
+| `sql/marts/` | `marts` | Star schema: `dim_*` tables (one row per thing) and `fct_*` tables (one row per event). The grain is the first line of each file |
+| `sql/tests/` | none | Data tests. Each one returns the bad rows, so **0 rows means it passes** |
+| `sql/analyses/` | none | Ad-hoc queries that read from the marts |
 
-Build the staging views (run this after every new download, or after changing a staging file):
-
-```bash
-python scripts/run_sql.py sql/staging/*.sql
-```
-
-Then run any analysis or check, for example:
+**Build** the staging views and the mart tables. Run this after every new download, or after changing a staging or mart file. Staging must come first, because the marts read from it:
 
 ```bash
-python scripts/run_sql.py sql/analyses/03_running_points.sql
+python scripts/run_sql.py sql/staging/*.sql sql/marts/*.sql
 ```
+
+**Test** the marts. Every test should print `0 rows`:
 
 ```bash
-python scripts/run_sql.py sql/check_pitstops.sql
+for f in sql/tests/*.sql; do echo "== $f"; python scripts/run_sql.py "$f"; done
 ```
 
-The database is saved to a file, so views stay there between runs. It holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a view, so that stale views can't hide mistakes:
+**Run an analysis**, for example:
+
+```bash
+python scripts/run_sql.py sql/analyses/06_constructor_pitstops.sql
+```
+
+The database is saved to a file, so views and tables stay there between runs. It holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a view or table, so that stale objects can't hide mistakes:
 
 ```bash
 rm data/f1.duckdb
 ```
 
 ```bash
-python scripts/run_sql.py sql/staging/*.sql
+python scripts/run_sql.py sql/staging/*.sql sql/marts/*.sql
 ```
 
 ## Development

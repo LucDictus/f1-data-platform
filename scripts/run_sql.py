@@ -6,7 +6,7 @@ import duckdb
 
 def main() -> None:
     sql_files = [Path(arg) for arg in sys.argv[1:]]
-    con = duckdb.connect()  # in-memory database, gone when the script ends
+    con = duckdb.connect("data/f1.duckdb")
 
     for index, sql_file in enumerate(sql_files):
         relation = con.sql(sql_file.read_text(encoding="utf-8"))
@@ -17,4 +17,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    

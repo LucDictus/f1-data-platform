@@ -26,5 +26,3 @@ SELECT
 FROM results;
 
 SELECT * FROM results_flat ORDER BY round, finish_position;
-
--- 479 rows (50 shown)  

@@ -3,7 +3,7 @@ WITH running AS (
         round,
         driver_id,
         SUM(points) OVER (PARTITION BY driver_id ORDER BY round) AS total_points
-    FROM results_flat
+    FROM staging.stg_results
 )
 SELECT
     round,

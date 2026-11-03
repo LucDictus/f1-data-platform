@@ -74,13 +74,38 @@ python src/f1_pipeline/ingest/jolpica.py
 
 The JSON files are written to `data/raw/`. Git ignores this folder.
 
-**Run SQL files** against the DuckDB database `data/f1.duckdb`. The files run in the order you pass them, and the result of the last one is printed:
+**Run SQL files** against the DuckDB database `data/f1.duckdb`. The files run in the order you pass them, and the result of the last one is printed. The SQL is split into layers:
+
+| Folder | Schema | What it holds |
+|---|---|---|
+| `sql/staging/` | `staging` | One view per raw source: flatten, cast and rename only |
+| `sql/analyses/` | none | Ad-hoc queries that read from the layers above |
+
+Build the staging views (run this after every new download, or after changing a staging file):
 
 ```bash
-python scripts/run_sql.py sql/01_results_flat.sql sql/03_running_points.sql
+python scripts/run_sql.py sql/staging/*.sql
 ```
 
-Because the database is saved to a file, a view created in one run is still there in the next one.
+Then run any analysis or check, for example:
+
+```bash
+python scripts/run_sql.py sql/analyses/03_running_points.sql
+```
+
+```bash
+python scripts/run_sql.py sql/check_pitstops.sql
+```
+
+The database is saved to a file, so views stay there between runs. It holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a view, so that stale views can't hide mistakes:
+
+```bash
+rm data/f1.duckdb
+```
+
+```bash
+python scripts/run_sql.py sql/staging/*.sql
+```
 
 ## Development
 

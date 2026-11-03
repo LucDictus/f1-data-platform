@@ -1,4 +1,6 @@
-CREATE OR REPLACE VIEW results_flat AS
+CREATE SCHEMA IF NOT EXISTS staging;
+
+CREATE OR REPLACE VIEW staging.stg_results AS
 WITH races AS (
     SELECT unnest(MRData.RaceTable.Races) AS race
     FROM read_json_auto('data/raw/results/season=2024/data.json')
@@ -25,4 +27,3 @@ SELECT
     r.status                    AS status
 FROM results;
 
-SELECT * FROM results_flat ORDER BY round, finish_position;

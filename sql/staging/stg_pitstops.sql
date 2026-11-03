@@ -1,4 +1,6 @@
-CREATE OR REPLACE VIEW pitstops_flat AS
+CREATE SCHEMA IF NOT EXISTS staging;
+
+CREATE OR REPLACE VIEW staging.stg_pitstops AS
 WITH races AS (
     SELECT unnest(MRData.RaceTable.Races) AS race
     FROM read_json_auto('data/raw/pitstops/season=2024/round=*/data.json')
@@ -27,5 +29,3 @@ SELECT
         ELSE TRY_CAST(p.duration::VARCHAR AS DOUBLE)
     END AS duration_s
 FROM stops;
-
-SELECT * FROM pitstops_flat ORDER BY duration_s DESC LIMIT 20;

@@ -1,0 +1,60 @@
+version: 2
+
+# Single-column tests. Tests on several columns (e.g. the grain of a fact table)
+# are SQL files in transform/tests/.
+models:
+  - name: dim_race
+    columns:
+      - name: season
+        data_tests: [not_null]
+      - name: round
+        data_tests: [not_null]
+
+  - name: dim_driver
+    columns:
+      - name: driver_id
+        data_tests: [unique, not_null]
+
+  - name: dim_constructor
+    columns:
+      - name: constructor_id
+        data_tests: [unique, not_null]
+
+  - name: fct_race_results
+    columns:
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_driver')
+                field: driver_id
+      - name: constructor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_constructor')
+                field: constructor_id
+
+  - name: fct_pit_stops
+    columns:
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_driver')
+                field: driver_id
+      # not_null matters here: the LEFT JOIN leaves constructor_id NULL when no result
+      # matches, and relationships tests skip NULLs.
+      - name: constructor_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_constructor')
+                field: constructor_id
+      # Empty durations are dropped in stg_pitstops.
+      - name: duration_s
+        data_tests: [not_null]

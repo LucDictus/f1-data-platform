@@ -1,5 +1,5 @@
 -- dim_race must have one row per race
 SELECT season, round, COUNT(*) AS n
-FROM marts.dim_race
+FROM {{ ref('dim_race') }}
 GROUP BY season, round
-HAVING COUNT(*) > 1;
+HAVING COUNT(*) > 1

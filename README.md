@@ -52,7 +52,7 @@ Your prompt now starts with `(.venv)`. **Run `source .venv/bin/activate` again e
 pip install -e ".[dev]"
 ```
 
-This installs `requests` and `duckdb` (needed to run the pipeline) and `pytest`, `ruff` and `responses` (needed for development). `-e` means "editable": your code changes take effect without reinstalling.
+This installs `requests`, `duckdb` and `dbt-duckdb` (needed to run the pipeline) and `pytest`, `ruff` and `responses` (needed for development). `-e` means "editable": your code changes take effect without reinstalling.
 
 ### 5. Check that it works
 
@@ -74,26 +74,22 @@ python src/f1_pipeline/ingest/jolpica.py
 
 The JSON files are written to `data/raw/`. Git ignores this folder.
 
-**Run SQL files** against the DuckDB database `data/f1.duckdb`. The files run in the order you pass them, and the result of the last one is printed. The SQL is split into layers:
+**Transform the data with dbt.** The dbt project lives in `transform/` and builds into the DuckDB database `data/f1.duckdb`:
 
 | Folder | Schema | What it holds |
 |---|---|---|
-| `sql/staging/` | `staging` | One view per raw source: flatten, cast and rename only |
-| `sql/marts/` | `marts` | Star schema: `dim_*` tables (one row per thing) and `fct_*` tables (one row per event). The grain is the first line of each file |
-| `sql/tests/` | none | Data tests. Each one returns the bad rows, so **0 rows means it passes** |
+| `transform/models/staging/` | `staging` | One view per raw source: flatten, cast and rename only. `_sources.yml` points to the raw JSON |
+| `transform/models/marts/` | `marts` | Star schema: `dim_*` tables (one row per thing) and `fct_*` tables (one row per event). The grain is the first line of each file. `_marts.yml` holds the single-column tests |
+| `transform/tests/` | none | Tests on several columns. Each one returns the bad rows, so 0 rows means it passes |
 | `sql/analyses/` | none | Ad-hoc queries that read from the marts |
 
-**Build** the staging views and the mart tables. Run this after every new download, or after changing a staging or mart file. Staging must come first, because the marts read from it:
+**Build and test** everything in one command. Run it after every new download, or after changing a model. dbt works out the order from the `ref()` and `source()` calls:
 
 ```bash
-python scripts/run_sql.py sql/staging/*.sql sql/marts/*.sql
+dbt build --project-dir transform --profiles-dir transform
 ```
 
-**Test** the marts. Every test should print `0 rows`:
-
-```bash
-for f in sql/tests/*.sql; do echo "== $f"; python scripts/run_sql.py "$f"; done
-```
+Every line should say `OK` or `PASS`. A failing test stops the models that depend on it.
 
 **Run an analysis**, for example:
 
@@ -101,14 +97,14 @@ for f in sql/tests/*.sql; do echo "== $f"; python scripts/run_sql.py "$f"; done
 python scripts/run_sql.py sql/analyses/06_constructor_pitstops.sql
 ```
 
-The database is saved to a file, so views and tables stay there between runs. It holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a view or table, so that stale objects can't hide mistakes:
+The database holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a model, so that stale views and tables can't hide mistakes:
 
 ```bash
 rm data/f1.duckdb
 ```
 
 ```bash
-python scripts/run_sql.py sql/staging/*.sql sql/marts/*.sql
+dbt build --project-dir transform --profiles-dir transform
 ```
 
 ## Development

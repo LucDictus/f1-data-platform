@@ -1,9 +1,6 @@
-CREATE SCHEMA IF NOT EXISTS staging;
-
-CREATE OR REPLACE VIEW staging.stg_results AS
 WITH races AS (
     SELECT unnest(MRData.RaceTable.Races) AS race
-    FROM read_json_auto('data/raw/results/season=2024/data.json')
+    FROM {{ source('jolpica', 'results') }}
 ),
 results AS (
     SELECT
@@ -35,5 +32,4 @@ SELECT
     r.position::INT             AS finish_position,
     r.points::DOUBLE            AS points,
     r.status                    AS status
-FROM results;
-
+FROM results

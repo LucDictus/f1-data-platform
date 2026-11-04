@@ -103,3 +103,45 @@ def test_fetch_all_exact_multiple_does_not_fetch_extra_page():
         pages = jolpica.fetch_all(s, "2024/results", limit=100)
 
     assert len(pages) == 2
+
+
+def test_parse_single_season(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--season", "2023"])
+
+    assert jolpica.parse_args() == [2023]
+
+
+def test_parse_season_range(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--from", "2018", "--to", "2024"])
+
+    assert jolpica.parse_args() == list(range(2018, 2025))
+
+
+def test_parse_single_year_range(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--from", "2020", "--to", "2020"])
+
+    assert jolpica.parse_args() == [2020]
+
+
+def test_parse_invalid_season(monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["jolpica.py", "--season", str(jolpica.CURRENT_SEASON + 1)]
+    )
+
+    with pytest.raises(SystemExit):
+        jolpica.parse_args()
+
+
+def test_parse_invalid_range(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--from", "2024", "--to", "2018"])
+
+    with pytest.raises(SystemExit):
+        jolpica.parse_args()
+
+
+def test_parse_missing_to(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--from", "2018"])
+
+    with pytest.raises(SystemExit):
+        jolpica.parse_args()

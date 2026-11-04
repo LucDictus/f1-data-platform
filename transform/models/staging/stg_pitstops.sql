@@ -1,16 +1,13 @@
-CREATE SCHEMA IF NOT EXISTS staging;
-
-CREATE OR REPLACE VIEW staging.stg_pitstops AS
 WITH races AS (
     SELECT unnest(MRData.RaceTable.Races) AS race
-    FROM read_json_auto('data/raw/pitstops/season=2024/round=*/data.json')
+    FROM {{ source('jolpica', 'pitstops') }}
 ),
 stops AS (
     SELECT
         race.season::INT AS season,
         race.round::INT  AS round,
         race.raceName    AS race_name,
-        race.circuit.circuitID AS circuit_id,
+        race.Circuit.circuitId AS circuit_id,
         unnest(race.PitStops) AS p
     FROM races
 )
@@ -29,9 +26,9 @@ SELECT
             TRY_CAST(split_part(p.duration::VARCHAR, ':', 1) AS INT) * 60
             + TRY_CAST(split_part(p.duration::VARCHAR, ':', 2) AS DOUBLE)
         ELSE TRY_CAST(p.duration::VARCHAR AS DOUBLE)
-END AS duration_s
+    END AS duration_s
 FROM stops
 -- Dropped: one raw row has an empty duration. A pit stop without a time is
 -- useless for duration analysis, and dropping it keeps duration_s NOT NULL
 -- downstream. Side effect: a gap in stop_number for that driver.
-WHERE p.duration::VARCHAR != '';
+WHERE p.duration::VARCHAR != ''

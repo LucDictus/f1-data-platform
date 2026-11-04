@@ -11,3 +11,8 @@ __pycache__/
 build/
 dist/
 .idea
+
+transform/target/
+transform/logs/
+transform/dbt_packages/
+transform/.user.yml

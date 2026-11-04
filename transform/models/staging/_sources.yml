@@ -1,0 +1,13 @@
+version: 2
+
+# Raw JSON written by src/f1_pipeline/ingest/jolpica.py. Paths are relative to the repo root,
+# because dbt runs from there (see README). season=* picks up every season on disk.
+sources:
+  - name: jolpica
+    tables:
+      - name: results
+        meta:
+          external_location: "read_json_auto('data/raw/results/season=*/data.json')"
+      - name: pitstops
+        meta:
+          external_location: "read_json_auto('data/raw/pitstops/season=*/round=*/data.json')"

@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
             # Round-level endpoints
             for round_ in get_rounds(s, season):
-                if raw_exists(season, "pitstops", round_):
+                if raw_exists(season, "pitstops", round_) and season < CURRENT_SEASON:
                     print(f"Skipping {season} round {round_} pitstops (already exists)")
                     continue
 

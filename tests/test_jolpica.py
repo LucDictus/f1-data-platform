@@ -124,10 +124,7 @@ def test_parse_single_year_range(monkeypatch):
 
 
 def test_parse_invalid_season(monkeypatch):
-    monkeypatch.setattr(
-        "sys.argv",
-        ["jolpica.py", "--season", str(jolpica.CURRENT_SEASON + 1)]
-    )
+    monkeypatch.setattr("sys.argv", ["jolpica.py", "--season", str(jolpica.CURRENT_SEASON + 1)])
 
     with pytest.raises(SystemExit):
         jolpica.parse_args()

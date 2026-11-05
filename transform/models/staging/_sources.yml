@@ -7,7 +7,7 @@ sources:
     tables:
       - name: results
         meta:
-          external_location: "read_json_auto('data/raw/results/season=*/data.json')"
+          external_location: "{{ env_var('F1_DATA_DIR', 'data') }}/raw/results/season=*/data.json"
       - name: pitstops
         meta:
-          external_location: "read_json_auto('data/raw/pitstops/season=*/round=*/data.json')"
+          external_location: "{{ env_var('F1_DATA_DIR', 'data') }}/raw/pitstops/season=*/round=*/data.json"

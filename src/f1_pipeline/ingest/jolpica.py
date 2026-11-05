@@ -114,26 +114,31 @@ def parse_args():
     return list(range(args.start_season, args.end_season + 1))
 
 
+def ingest_season(session: requests.Session, season: int) -> None:
+    """Download results and per-round pit stops for one season."""
+    print(f"\nLoading season {season}...")
+
+    # Season-level endpoints
+    if raw_exists(season, "results") and season < CURRENT_SEASON:
+        print(f"Skipping {season} results (already exists)")
+    else:
+        pages = fetch_all(session, f"{season}/results")
+        print(save_raw(season, "results", pages))
+
+    # Round-level endpoints
+    for round_ in get_rounds(session, season):
+        if raw_exists(season, "pitstops", round_) and season < CURRENT_SEASON:
+            print(f"Skipping {season} round {round_} pitstops (already exists)")
+            continue
+
+        pages = fetch_all(session, f"{season}/{round_}/pitstops")
+        print(save_raw_round(season, "pitstops", round_, pages))
+        time.sleep(0.5)
+
+
 if __name__ == "__main__":
     seasons = parse_args()
 
     with requests.Session() as s:
         for season in seasons:
-            print(f"\nLoading season {season}...")
-
-            # Season-level endpoints
-            if raw_exists(season, "results") and season < CURRENT_SEASON:
-                print(f"Skipping {season} results (already exists)")
-            else:
-                pages = fetch_all(s, f"{season}/results")
-                print(save_raw(season, "results", pages))
-
-            # Round-level endpoints
-            for round_ in get_rounds(s, season):
-                if raw_exists(season, "pitstops", round_) and season < CURRENT_SEASON:
-                    print(f"Skipping {season} round {round_} pitstops (already exists)")
-                    continue
-
-                pages = fetch_all(s, f"{season}/{round_}/pitstops")
-                print(save_raw_round(season, "pitstops", round_, pages))
-                time.sleep(0.5)
+            ingest_season(s, season)

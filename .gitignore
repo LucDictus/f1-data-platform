@@ -16,3 +16,5 @@ transform/target/
 transform/logs/
 transform/dbt_packages/
 transform/.user.yml
+
+.tmp_dagster_home_*/

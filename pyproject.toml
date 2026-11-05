@@ -4,10 +4,10 @@
     description = "My f1 data platform"
     authors = [{ name = "LucDictus", email = "lucdictus161@gmail.com" }]
     requires-python = ">=3.12"
-    dependencies = ["requests", "duckdb", "dbt-duckdb"]
+    dependencies = ["requests", "duckdb", "dbt-duckdb>=1.11", "dagster", "dagster-dbt", "dbt-core>=1.12"]
 
 [project.optional-dependencies]
-    dev = ["pytest", "ruff", "responses"]
+    dev = ["pytest", "ruff", "responses", "dagster-webserver"]
 
 [tool.ruff]
     line-length = 100

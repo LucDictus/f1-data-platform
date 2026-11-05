@@ -66,11 +66,17 @@ All tests should pass.
 
 Run every command from the repo root, because the scripts use paths relative to it.
 
-**Download the raw data** (the 2024 season, takes about a minute):
+**Download the raw data** for one season, or a range of seasons (2018 up to the current season):
 
 ```bash
-python src/f1_pipeline/ingest/jolpica.py
+python src/f1_pipeline/ingest/jolpica.py --season 2024
 ```
+
+```bash
+python src/f1_pipeline/ingest/jolpica.py --from 2018 --to 2025
+```
+
+Past seasons that are already on disk are skipped. The current season is always downloaded again, because races are still being added.
 
 The JSON files are written to `data/raw/`. Git ignores this folder.
 
@@ -106,6 +112,22 @@ rm data/f1.duckdb
 ```bash
 dbt build --project-dir transform --profiles-dir transform
 ```
+
+## Orchestration (Dagster)
+
+Dagster runs the download and `dbt build` as one pipeline, in the right order. The pipeline is defined in `src/f1_pipeline/definitions.py`. Start the web interface from the repo root:
+
+```bash
+dagster dev -m f1_pipeline.definitions
+```
+
+Then open http://localhost:3000:
+
+- **Assets → View lineage** shows the whole graph, from the raw JSON to the marts.
+- **Materialize all** runs the pipeline now: it downloads the current season, then builds and tests every dbt model.
+- **Automation → `weekly_refresh_schedule`** runs the same pipeline every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while `dagster dev` is running.
+
+The pipeline only downloads the current season. To load an older season, use the download command above.
 
 ## Development
 

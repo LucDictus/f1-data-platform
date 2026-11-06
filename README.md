@@ -124,10 +124,10 @@ dagster dev -m f1_pipeline.definitions
 Then open http://localhost:3000:
 
 - **Assets → View lineage** shows the whole graph, from the raw JSON to the marts.
-- **Materialize all** runs the pipeline now: it downloads the current season, then builds and tests every dbt model.
-- **Automation → `weekly_refresh_schedule`** runs the same pipeline every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while `dagster dev` is running.
+- **Materialize all** runs the pipeline now: pick one or more seasons, Dagster downloads them, then builds and tests every dbt model. Each season is a partition: **Assets → jolpica/results** shows which seasons are loaded, and a missing season can be backfilled from there.
+- **Automation → `weekly_schedule`** refreshes the current season every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while `dagster dev` is running.
 
-The pipeline only downloads the current season. To load an older season, use the download command above.
+Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_completeness_dim_race` fails if a season from 2018 to now has no races.
 
 ## Development
 

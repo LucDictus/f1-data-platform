@@ -1,10 +1,10 @@
 # F1 Data Platform
 
-A learning project that downloads Formula 1 data from the [Jolpica API](https://api.jolpi.ca/ergast/f1), stores the raw JSON, and transforms it with SQL in DuckDB.
+A learning project that downloads Formula 1 data from the [Jolpica API](https://api.jolpi.ca/ergast/f1), stores the raw JSON, and transforms it with SQL in DuckDB. The cleaned data is written as Parquet files to local S3-compatible object storage, which runs in Docker.
 
 ## Installation
 
-You only need **Git** and **Python 3.12 or newer**. Everything else is installed into a virtual environment inside the project folder.
+You need **Git**, **Python 3.12 or newer** and **Docker** (with Docker Compose). Everything else is installed into a virtual environment inside the project folder, or runs in a container.
 
 ### 1. Check the prerequisites
 
@@ -16,11 +16,17 @@ git --version
 python3 --version
 ```
 
-If either is missing on Ubuntu/Debian:
+```bash
+docker compose version
+```
+
+If Git or Python is missing on Ubuntu/Debian:
 
 ```bash
 sudo apt install git python3 python3-venv
 ```
+
+For Docker, follow the [official install guide](https://docs.docker.com/engine/install/).
 
 ### 2. Clone the repo
 
@@ -54,7 +60,25 @@ pip install -e ".[dev]"
 
 This installs `requests`, `duckdb` and `dbt-duckdb` (needed to run the pipeline) and `pytest`, `ruff` and `responses` (needed for development). `-e` means "editable": your code changes take effect without reinstalling.
 
-### 5. Check that it works
+### 5. Start the object storage
+
+The staging models are written as Parquet files to an S3 bucket. Locally that bucket lives in [RustFS](https://rustfs.com), an S3-compatible server that runs in Docker. It works the same way as AWS S3, so in the cloud only the address and the keys would change.
+
+Create your own settings file from the example. Git ignores `.env`, so your keys never end up on GitHub:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in both values: a username and a password you make up. They are only used on your own machine. Then start the storage:
+
+```bash
+docker compose up -d
+```
+
+This starts two containers: `s3` (the storage server, on port 9000) and `createbucket`, which creates the bucket `f1-lake` and then stops. Your data is kept in a Docker volume, so it survives a restart. Stop the storage with `docker compose down`. Adding `-v` also deletes the stored data.
+
+### 6. Check that it works
 
 ```bash
 pytest
@@ -82,15 +106,21 @@ Past seasons that are already on disk are skipped. The current season is always 
 
 The JSON files are written to `data/raw/`. Git ignores this folder.
 
-**Transform the data with dbt.** The dbt project lives in `transform/` and builds into the DuckDB database `data/f1.duckdb`:
+**Transform the data with dbt.** The dbt project lives in `transform/`. Staging is written as Parquet files to the `f1-lake` bucket, and the marts are built into the DuckDB database `data/f1.duckdb`:
 
 | Folder | Schema | What it holds |
 |---|---|---|
-| `transform/models/staging/` | `staging` | One view per raw source: flatten, cast and rename only. `_sources.yml` points to the raw JSON |
+| `transform/models/staging/` | `staging` | One Parquet file per raw source, at `s3://f1-lake/staging/<model>.parquet`: flatten, cast and rename only. `_sources.yml` points to the raw JSON. DuckDB has a view on each file, so `ref()` works as usual |
 | `transform/models/marts/` | `marts` | Star schema: `dim_*` tables (one row per thing) and `fct_*` tables (one row per event). The grain is the first line of each file. `_marts.yml` holds the single-column tests |
 | `transform/seeds/` | `main` | Small hand-written CSV tables, loaded by `dbt build`. `team_lineage.csv` maps every `constructor_id` to its team across renames (for example Toro Rosso, AlphaTauri and RB are all `racing_bulls`). Add a row when a new team appears; a test fails until you do |
 | `transform/tests/` | none | Tests on several columns. Each one returns the bad rows, so 0 rows means it passes |
 | `sql/analyses/` | none | Ad-hoc queries that read from the marts |
+
+dbt needs the storage keys from `.env`, and the storage must be running (`docker compose up -d`). Load the keys into your terminal; do this again in every new terminal:
+
+```bash
+set -a && source .env && set +a
+```
 
 **Build and test** everything in one command. Run it after every new download, or after changing a model. dbt works out the order from the `ref()` and `source()` calls:
 
@@ -112,7 +142,7 @@ dbt build --project-dir transform --profiles-dir transform --full-refresh
 python scripts/run_sql.py sql/analyses/06_constructor_pitstops.sql
 ```
 
-The database holds no data of its own, so you can delete it and rebuild it at any time. Do this after renaming or removing a model, so that stale views and tables can't hide mistakes:
+The database and the Parquet files hold no data of their own, so you can delete them and rebuild them at any time. Do this after renaming or removing a model, so that stale views and tables can't hide mistakes:
 
 ```bash
 rm data/f1.duckdb
@@ -124,7 +154,7 @@ dbt build --project-dir transform --profiles-dir transform
 
 ## Orchestration (Dagster)
 
-Dagster runs the download and `dbt build` as one pipeline, in the right order. The pipeline is defined in `src/f1_pipeline/definitions.py`. Start the web interface from the repo root:
+Dagster runs the download and `dbt build` as one pipeline, in the right order. The pipeline is defined in `src/f1_pipeline/definitions.py`. Make sure the storage is running (`docker compose up -d`). Dagster reads `.env` by itself, so you don't need the `source .env` step here. Start the web interface from the repo root:
 
 ```bash
 dagster dev -m f1_pipeline.definitions

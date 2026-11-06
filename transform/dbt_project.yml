@@ -5,7 +5,7 @@ profile: f1
 models:
   f1:
     staging:
-      +materialized: view
+      +materialized: external
       +schema: staging
     marts:
       +materialized: table

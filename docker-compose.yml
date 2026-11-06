@@ -1,0 +1,20 @@
+services:
+  s3:
+    image: rustfs/rustfs:1.0.3
+    ports: ["9000:9000"]
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes: ["s3-data:/data"]
+  createbucket:
+    image: amazon/aws-cli:2.27.0
+    depends_on: [s3]
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      sh -c "until aws --endpoint-url http://s3:9000 s3 ls; do sleep 1; done;
+             aws --endpoint-url http://s3:9000 s3 mb s3://f1-lake || true"
+volumes:
+  s3-data:

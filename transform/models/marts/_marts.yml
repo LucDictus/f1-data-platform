@@ -58,3 +58,19 @@ models:
       # Empty durations are dropped in stg_pitstops.
       - name: duration_s
         data_tests: [not_null]
+
+  - name: fct_lap_times
+    columns:
+      - name: season
+        data_tests: [ not_null ]
+      - name: round
+        data_tests: [ not_null ]
+      - name: lap
+        data_tests: [ not_null ]
+      - name: driver_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_driver')
+                field: driver_id

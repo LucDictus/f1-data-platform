@@ -76,6 +76,8 @@ python src/f1_pipeline/ingest/jolpica.py --season 2024
 python src/f1_pipeline/ingest/jolpica.py --from 2018 --to 2025
 ```
 
+This downloads race results, and per race the pit stops and lap times. The API allows 500 requests per hour, so the script waits 7.2 seconds before every request. Lap times are large (about 12 requests per race), so a first full download of all seasons takes about 5 hours. You can stop it at any time: the next run skips what is already on disk.
+
 Past seasons that are already on disk are skipped. The current season is always downloaded again, because races are still being added.
 
 The JSON files are written to `data/raw/`. Git ignores this folder.
@@ -86,6 +88,7 @@ The JSON files are written to `data/raw/`. Git ignores this folder.
 |---|---|---|
 | `transform/models/staging/` | `staging` | One view per raw source: flatten, cast and rename only. `_sources.yml` points to the raw JSON |
 | `transform/models/marts/` | `marts` | Star schema: `dim_*` tables (one row per thing) and `fct_*` tables (one row per event). The grain is the first line of each file. `_marts.yml` holds the single-column tests |
+| `transform/seeds/` | `main` | Small hand-written CSV tables, loaded by `dbt build`. `team_lineage.csv` maps every `constructor_id` to its team across renames (for example Toro Rosso, AlphaTauri and RB are all `racing_bulls`). Add a row when a new team appears; a test fails until you do |
 | `transform/tests/` | none | Tests on several columns. Each one returns the bad rows, so 0 rows means it passes |
 | `sql/analyses/` | none | Ad-hoc queries that read from the marts |
 
@@ -96,6 +99,12 @@ dbt build --project-dir transform --profiles-dir transform
 ```
 
 Every line should say `OK` or `PASS`. A failing test stops the models that depend on it.
+
+`fct_lap_times` is **incremental**: after the first build, dbt only adds races that are not in the table yet. When you change its SQL, rebuild it from scratch:
+
+```bash
+dbt build --project-dir transform --profiles-dir transform --full-refresh
+```
 
 **Run an analysis**, for example:
 

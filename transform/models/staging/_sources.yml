@@ -11,3 +11,6 @@ sources:
       - name: pitstops
         meta:
           external_location: "{{ env_var('F1_DATA_DIR', 'data') }}/raw/pitstops/season=*/round=*/data.json"
+      - name: laps
+        meta:
+          external_location: "{{ env_var('F1_DATA_DIR', 'data') }}/raw/laps/season=*/round=*/data.json"

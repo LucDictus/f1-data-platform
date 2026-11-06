@@ -10,12 +10,16 @@ BASE_URL = "https://api.jolpi.ca/ergast/f1"
 RAW_DIR = Path("data/raw")
 
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+REQUEST_INTERVAL = 3600 / 500  # Jolpica allows 500 requests per hour without a token
 CURRENT_SEASON = datetime.now().year
+
+ROUND_ENDPOINTS = ["pitstops", "laps"]
 
 
 def fetch_page(session: requests.Session, path: str, limit: int = 100, offset: int = 0) -> dict:
     url = f"{BASE_URL}/{path}.json"
     for attempt in range(5):
+        time.sleep(REQUEST_INTERVAL)
         resp = session.get(url, params={"limit": limit, "offset": offset}, timeout=30)
         if resp.status_code in RETRYABLE_STATUS:
             time.sleep(2**attempt)  # exponential backoff
@@ -34,7 +38,6 @@ def fetch_all(session: requests.Session, path: str, limit: int = 100) -> list[di
         offset += limit
         if offset >= total:
             return pages
-        time.sleep(0.5)  # be polite
 
 
 def save_raw(season: int, endpoint: str, pages: list[dict]) -> Path:
@@ -115,7 +118,7 @@ def parse_args():
 
 
 def ingest_season(session: requests.Session, season: int) -> None:
-    """Download results and per-round pit stops for one season."""
+    """Download results and per-round pit stops and laps for one season."""
     print(f"\nLoading season {season}...")
 
     # Season-level endpoints
@@ -127,13 +130,13 @@ def ingest_season(session: requests.Session, season: int) -> None:
 
     # Round-level endpoints
     for round_ in get_rounds(session, season):
-        if raw_exists(season, "pitstops", round_) and season < CURRENT_SEASON:
-            print(f"Skipping {season} round {round_} pitstops (already exists)")
-            continue
+        for endpoint in ROUND_ENDPOINTS:
+            if raw_exists(season, endpoint, round_) and season < CURRENT_SEASON:
+                print(f"Skipping {season} round {round_} {endpoint} (already exists)")
+                continue
 
-        pages = fetch_all(session, f"{season}/{round_}/pitstops")
-        print(save_raw_round(season, "pitstops", round_, pages))
-        time.sleep(0.5)
+            pages = fetch_all(session, f"{season}/{round_}/{endpoint}")
+            print(save_raw_round(season, endpoint, round_, pages))
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
 COPY transform ./transform
+COPY dashboard ./dashboard
 RUN pip install --no-cache-dir -e ".[dev]" && chown -R f1 /app
 
 USER f1

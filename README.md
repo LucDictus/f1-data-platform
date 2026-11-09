@@ -1,6 +1,6 @@
 # F1 Data Platform
 
-A learning project that downloads Formula 1 data from the [Jolpica API](https://api.jolpi.ca/ergast/f1), stores the raw JSON, and transforms it with SQL in DuckDB. The cleaned data is written as Parquet files to local S3-compatible object storage, which runs in Docker.
+A learning project that downloads Formula 1 data from the [Jolpica API](https://api.jolpi.ca/ergast/f1), stores the raw JSON, and transforms it with SQL in DuckDB. The cleaned data is written as Parquet files to local S3-compatible object storage, which runs in Docker. Dagster orchestrates the pipeline, and a Streamlit dashboard shows the results.
 
 ## Installation
 
@@ -58,7 +58,7 @@ Your prompt now starts with `(.venv)`. **Run `source .venv/bin/activate` again e
 pip install -e ".[dev]"
 ```
 
-This installs `requests`, `duckdb` and `dbt-duckdb` (needed to run the pipeline) and `pytest`, `ruff` and `responses` (needed for development). `-e` means "editable": your code changes take effect without reinstalling.
+This installs the pipeline packages (`requests`, `duckdb`, `dbt-duckdb`, `dagster`, `dagster-dbt` and `streamlit`) and the development tools (`pytest`, `ruff`, `responses` and `dagster-webserver`). `-e` means "editable": your code changes take effect without reinstalling.
 
 ### 5. Start the containers
 
@@ -76,15 +76,16 @@ Open `.env` and fill in both values: a username and a password you make up. They
 docker compose up -d --build
 ```
 
-This starts three containers:
+This starts four containers:
 
 | Container | What it does |
 |---|---|
 | `s3` | The storage server, on port 9000. Its data is kept in a Docker volume, so it survives a restart |
 | `createbucket` | Creates the bucket `f1-lake`, then stops |
-| `dagster` | The pipeline and its web interface, on http://localhost:3000. Built from the `Dockerfile`; see [Orchestration](#orchestration-dagster) |
+| `dagster` | The pipeline and its web interface, on http://localhost:3000. See [Orchestration](#orchestration-dagster) |
+| `dashboard` | The Streamlit dashboard, on http://localhost:8501. See [Dashboard](#dashboard) |
 
-`--build` rebuilds the `dagster` image, so your latest code changes are included. The first build takes about a minute.
+`dagster` and `dashboard` use the same image, built from the `Dockerfile`, but each runs a different command. `--build` rebuilds that image, so your latest code changes are included. The first build takes about a minute.
 
 Stop everything with `docker compose down`. Adding `-v` also deletes the stored Parquet files. Containers don't start again by themselves after your laptop restarts, so run `docker compose up -d` again.
 
@@ -191,6 +192,26 @@ Open http://localhost:3000:
 To rebuild only the dbt models, without downloading, select the `staging/` and `marts/` assets and click **Materialize selected**. Never start a download in Dagster while the download script is running in a terminal: together they exceed the API limit of 500 requests per hour.
 
 Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_completeness_dim_race` fails if a season from 2018 to now has no races.
+
+## Dashboard
+
+`dashboard/app.py` is a [Streamlit](https://streamlit.io) app that reads the marts from `data/f1.duckdb`. It shows:
+
+- points per team per season, using `team_lineage`, so renamed teams stay one line
+- the average pit stop per team, for the season you pick. Stops over 60 seconds (`is_long_stop` in `fct_pit_stops`: cars waiting in the pit lane during a red flag) are left out
+- lap times per driver in one race. Laps slower than 1.2 × the race median (safety car, red flag) are left out, so the chart doesn't flatten
+
+The `dashboard` container serves it on http://localhost:8501. To run it outside Docker instead (for example while changing `app.py`), stop the container first, because both use port 8501:
+
+```bash
+docker compose stop dashboard
+```
+
+```bash
+streamlit run dashboard/app.py
+```
+
+The dashboard opens the database for each query and closes it straight away. DuckDB allows only one process to write to a database file, and while any connection is open, even a read-only one, `dbt build` fails with `Could not set lock on file`. Query results are cached for 10 minutes, so after a new `dbt build` the charts can take up to 10 minutes to update.
 
 ## Development
 

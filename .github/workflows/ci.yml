@@ -18,3 +18,9 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest
+      - name: dbt build on fixture data
+        env:
+          F1_DATA_DIR: tests/fixtures/data
+        run: |
+          mkdir -p tests/fixtures/data/lake
+          dbt build --project-dir transform --profiles-dir transform --target ci --exclude season_completeness_dim_race

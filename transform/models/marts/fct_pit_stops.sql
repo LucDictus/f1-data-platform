@@ -6,7 +6,9 @@ SELECT
     r.constructor_id,
     p.stop_number,
     p.lap,
-    p.duration_s
+    p.duration_s,
+    -- Red flags: cars wait in the pit lane, which is not a real stop.
+    p.duration_s > 60 AS is_long_stop
 FROM {{ ref('stg_pitstops') }} AS p
 LEFT JOIN {{ ref('stg_results') }} AS r
     ON  p.season    = r.season

@@ -145,3 +145,5 @@ mkdir -p tests/fixtures/data/lake
 ```bash
 F1_DATA_DIR=tests/fixtures/data dbt build --project-dir transform --profiles-dir transform --target ci
 ```
+
+CI also builds the Docker image (`docker build .`), so a broken `Dockerfile` never reaches `main`.

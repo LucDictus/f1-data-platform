@@ -34,7 +34,7 @@ flowchart LR
 - **Tests** the data with 30 dbt data tests (unique keys, foreign keys, completeness of every season, a lineage entry for every team) and the time parsing with 2 dbt unit tests.
 - **Orchestrates** everything with Dagster: one partition per season, a weekly refresh that only downloads the latest races, and the dbt models as assets in the same graph.
 - **Shows** the results in a Streamlit dashboard: points per team over the seasons, average pit stops per team, and lap times per driver in one race.
-- **Checks** every pull request in CI: linting, unit tests, and a full `dbt build` on a small set of real data.
+- **Checks** every pull request in CI: linting, unit tests, a full `dbt build` on a small set of real data, and a Docker build.
 
 ## Tech stack
 

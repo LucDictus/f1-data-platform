@@ -24,3 +24,6 @@ jobs:
         run: |
           mkdir -p tests/fixtures/data/lake
           dbt build --project-dir transform --profiles-dir transform --target ci
+      # Catches a broken Dockerfile before it reaches main.
+      - name: Build the Docker image
+        run: docker build .

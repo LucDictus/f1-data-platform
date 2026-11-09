@@ -13,3 +13,8 @@ f1:
         s3_region: us-east-1
         s3_use_ssl: false
         s3_url_style: path
+    # CI has no S3 storage, so it writes the Parquet files to a local folder.
+    ci:
+      type: duckdb
+      path: "{{ env_var('F1_DATA_DIR', 'data') }}/f1.duckdb"
+      external_root: "{{ env_var('F1_DATA_DIR', 'data') }}/lake"

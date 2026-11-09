@@ -20,3 +20,5 @@ transform/dbt_packages/
 transform/.user.yml
 
 .tmp_dagster_home_*/
+
+tests/fixtures/data/lake/

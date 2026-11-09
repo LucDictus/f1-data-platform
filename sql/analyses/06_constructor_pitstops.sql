@@ -1,4 +1,4 @@
--- “Fastest average pit stop per constructor” needs a join, because pit stops only contain driver_id. Join pitstops_flat to results_flat on round and driver_id to get the constructor, then GROUP BY constructor_id. This is your first taste of how a fact table and a dimension relate, so try it as sql/06_constructor_pitstops.sql before looking for help.
+-- Average pit stop time per team over all seasons, without red-flag stops.
 SELECT
     f.constructor_id,
     d.constructor_name,

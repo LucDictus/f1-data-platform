@@ -92,3 +92,7 @@ sql/analyses/          ad-hoc SQL on the marts
 tests/                 unit tests, and fixture data for dbt in CI
 docker-compose.yml     storage, Dagster and the dashboard
 ```
+
+## License
+
+[MIT](LICENSE). The F1 data comes from the [Jolpica API](https://github.com/jolpica/jolpica-f1).

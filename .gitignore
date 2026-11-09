@@ -2,9 +2,7 @@
 .env
 dump/
 .venv/
-data/raw/
-data/lake/
-data/dagster_home/
+data/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

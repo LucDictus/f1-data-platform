@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -e ".[dev]"
+      - run: pip install -c constraints.txt -e ".[dev]"
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest
@@ -23,4 +23,7 @@ jobs:
           F1_DATA_DIR: tests/fixtures/data
         run: |
           mkdir -p tests/fixtures/data/lake
-          dbt build --project-dir transform --profiles-dir transform --target ci --exclude season_completeness_dim_race
+          dbt build --project-dir transform --profiles-dir transform --target ci
+      # Catches a broken Dockerfile before it reaches main.
+      - name: Build the Docker image
+        run: docker build .

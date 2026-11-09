@@ -55,10 +55,12 @@ Your prompt now starts with `(.venv)`. **Run `source .venv/bin/activate` again e
 ## 4. Install the project
 
 ```bash
-pip install -e ".[dev]"
+pip install -c constraints.txt -e ".[dev]"
 ```
 
-This installs the pipeline packages (`requests`, `duckdb`, `dbt-duckdb`, `dagster`, `dagster-dbt` and `streamlit`) and the development tools (`pytest`, `ruff`, `responses` and `dagster-webserver`). `-e` means "editable": your code changes take effect without reinstalling.
+This installs the pipeline packages (`requests`, `duckdb`, `dbt-duckdb`, `dagster`, `dagster-dbt`, `dagster-webserver` and `streamlit`) and the development tools (`pytest`, `ruff` and `responses`). `-e` means "editable": your code changes take effect without reinstalling.
+
+`-c constraints.txt` installs the exact versions this project is tested with, so a fresh install in a year still works. `pyproject.toml` only lists what the project needs; `constraints.txt` pins every package, including the ones those packages need. After upgrading a package on purpose, regenerate it with `pip freeze --exclude-editable > constraints.txt` (keep the two comment lines at the top).
 
 ## 5. Start the containers
 
@@ -76,7 +78,7 @@ Open `.env` and fill in both values: a username and a password you make up. They
 docker compose up -d --build
 ```
 
-This starts four containers:
+This starts four containers. Their ports are bound to `127.0.0.1`, so only your own machine can reach them, not others on the same network:
 
 | Container | What it does |
 |---|---|

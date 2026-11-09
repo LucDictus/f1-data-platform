@@ -1,7 +1,8 @@
+# Every port is bound to 127.0.0.1, so only this machine can reach the services.
 services:
   s3:
     image: rustfs/rustfs:1.0.3
-    ports: ["9000:9000"]
+    ports: ["127.0.0.1:9000:9000"]
     environment:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
       RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
@@ -18,7 +19,7 @@ services:
              aws --endpoint-url http://s3:9000 s3 mb s3://f1-lake || true"
   dagster:
     build: .
-    ports: ["3000:3000"]
+    ports: ["127.0.0.1:3000:3000"]
     env_file: .env
     environment:
       S3_ENDPOINT: s3:9000
@@ -27,7 +28,7 @@ services:
   dashboard:
     build: .
     command: streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501
-    ports: [ "8501:8501" ]
-    volumes: [ "./data:/app/data" ]
+    ports: ["127.0.0.1:8501:8501"]
+    volumes: ["./data:/app/data"]
 volumes:
   s3-data:

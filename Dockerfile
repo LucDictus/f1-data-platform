@@ -4,11 +4,11 @@ FROM python:3.12-slim
 RUN useradd --create-home --uid 1000 f1
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY pyproject.toml constraints.txt ./
 COPY src ./src
 COPY transform ./transform
 COPY dashboard ./dashboard
-RUN pip install --no-cache-dir -e ".[dev]" && chown -R f1 /app
+RUN pip install --no-cache-dir -c constraints.txt -e . && chown -R f1 /app
 
 USER f1
 ENV F1_DATA_DIR=/app/data DAGSTER_HOME=/app/data/dagster_home

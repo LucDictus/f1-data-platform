@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -6,7 +7,9 @@ import duckdb
 
 def main() -> None:
     sql_files = [Path(arg) for arg in sys.argv[1:]]
-    con = duckdb.connect("data/f1.duckdb")
+    con = duckdb.connect(
+        os.path.join(os.environ.get("F1_DATA_DIR", "data"), "f1.duckdb"), read_only=True
+    )
 
     for index, sql_file in enumerate(sql_files):
         relation = con.sql(sql_file.read_text(encoding="utf-8"))

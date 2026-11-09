@@ -21,12 +21,7 @@ SELECT
     p.lap::INT          AS lap,
     p.time::TIME        AS local_time,
     p.duration::VARCHAR AS duration_raw,
-    CASE
-        WHEN p.duration::VARCHAR LIKE '%:%' THEN
-            TRY_CAST(split_part(p.duration::VARCHAR, ':', 1) AS INT) * 60
-            + TRY_CAST(split_part(p.duration::VARCHAR, ':', 2) AS DOUBLE)
-        ELSE TRY_CAST(p.duration::VARCHAR AS DOUBLE)
-    END AS duration_s
+    {{ to_seconds('p.duration') }} AS duration_s
 FROM stops
 -- Dropped: one raw row has an empty duration. A pit stop without a time is
 -- useless for duration analysis, and dropping it keeps duration_s NOT NULL

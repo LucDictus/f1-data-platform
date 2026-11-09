@@ -1,0 +1,51 @@
+version: 2
+
+# Staging: one model per raw source. Flatten, cast and rename only; no business rules.
+models:
+  - name: stg_results
+    description: One row per driver per race, flattened from the results JSON.
+  - name: stg_pitstops
+    description: One row per pit stop. Stops without a duration are dropped.
+  - name: stg_laps
+    description: One row per driver per lap, flattened from the laps JSON.
+
+# Unit tests run the model's SQL on a few hand-written input rows and compare the output,
+# so they check the logic itself, independent of the real data.
+unit_tests:
+  - name: stg_laps_parses_lap_times
+    model: stg_laps
+    given:
+      - input: source('jolpica', 'laps')
+        format: sql
+        rows: |
+          SELECT {'RaceTable': {'Races': [{
+              'season': '2024', 'round': '1',
+              'Laps': [{'number': '1', 'Timings': [
+                  {'driverId': 'max_verstappen', 'position': '1', 'time': '1:32.456'},
+                  {'driverId': 'norris', 'position': '2', 'time': '59.5'}
+              ]}]
+          }]}} AS MRData
+    expect:
+      rows:
+        - {driver_id: max_verstappen, lap: 1, lap_time_s: 92.456}
+        - {driver_id: norris, lap: 1, lap_time_s: 59.5}
+
+  - name: stg_pitstops_parses_durations
+    model: stg_pitstops
+    given:
+      - input: source('jolpica', 'pitstops')
+        format: sql
+        rows: |
+          SELECT {'RaceTable': {'Races': [{
+              'season': '2024', 'round': '1', 'raceName': 'Test GP',
+              'Circuit': {'circuitId': 'test'},
+              'PitStops': [
+                  {'driverId': 'norris', 'stop': '1', 'lap': '20', 'time': '15:01:02', 'duration': '23.456'},
+                  {'driverId': 'albon', 'stop': '1', 'lap': '30', 'time': '15:20:00', 'duration': '28:01.500'},
+                  {'driverId': 'sainz', 'stop': '1', 'lap': '31', 'time': '15:21:00', 'duration': ''}
+              ]
+          }]}} AS MRData
+    expect:
+      rows:
+        - {driver_id: norris, duration_s: 23.456}
+        - {driver_id: albon, duration_s: 1681.5}

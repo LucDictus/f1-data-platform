@@ -15,7 +15,7 @@ project.prepare_if_dev()
 
 
 season_partitions = dg.StaticPartitionsDefinition(
-    [str(y) for y in range(2018, jolpica.CURRENT_SEASON + 1)]
+    [str(y) for y in range(jolpica.FIRST_SEASON, jolpica.CURRENT_SEASON + 1)]
 )
 
 

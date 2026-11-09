@@ -1,26 +1,40 @@
 version: 2
 
-# Single-column tests. Tests on several columns (e.g. the grain of a fact table)
+# Descriptions show up in the dbt docs site (dbt docs generate / dbt docs serve).
+# Single-column tests live here; tests on several columns (e.g. the grain of a fact table)
 # are SQL files in transform/tests/.
 models:
   - name: dim_race
+    description: One row per race, with its date and circuit.
     columns:
       - name: season
         data_tests: [not_null]
       - name: round
+        description: Race number within the season, starting at 1.
         data_tests: [not_null]
 
   - name: dim_driver
+    description: One row per driver.
     columns:
       - name: driver_id
+        description: The API's driver key, for example max_verstappen.
         data_tests: [unique, not_null]
+      - name: driver_code
+        description: Three-letter code shown on TV, for example VER.
 
   - name: dim_constructor
+    description: One row per constructor (team entry), with the team it belongs to across renames.
     columns:
       - name: constructor_id
+        description: The API's constructor key. A renamed team gets a new key.
         data_tests: [unique, not_null]
+      - name: team_lineage
+        description: >
+          The same team across renames, from the team_lineage seed. For example toro_rosso,
+          alphatauri and rb are all racing_bulls.
 
   - name: fct_race_results
+    description: One row per driver per race, with grid position, finish and points.
     columns:
       - name: driver_id
         data_tests:
@@ -36,8 +50,13 @@ models:
               arguments:
                 to: ref('dim_constructor')
                 field: constructor_id
+      - name: grid
+        description: Starting position. 0 means a start from the pit lane.
+      - name: points
+        description: Points from the Grand Prix itself. Sprint races are not included.
 
   - name: fct_pit_stops
+    description: One row per pit stop.
     columns:
       - name: driver_id
         data_tests:
@@ -57,16 +76,25 @@ models:
                 field: constructor_id
       # Empty durations are dropped in stg_pitstops.
       - name: duration_s
+        description: Time in the pit lane, in seconds.
+        data_tests: [not_null]
+      - name: is_long_stop
+        description: >
+          True for stops over 60 seconds. These are cars waiting in the pit lane during a red
+          flag, not real pit stops, so averages leave them out.
         data_tests: [not_null]
 
   - name: fct_lap_times
+    description: >
+      One row per driver per lap. Incremental: a build only adds races that are not in the
+      table yet. Use --full-refresh after changing the SQL.
     columns:
       - name: season
-        data_tests: [ not_null ]
+        data_tests: [not_null]
       - name: round
-        data_tests: [ not_null ]
+        data_tests: [not_null]
       - name: lap
-        data_tests: [ not_null ]
+        data_tests: [not_null]
       - name: driver_id
         data_tests:
           - not_null
@@ -74,3 +102,5 @@ models:
               arguments:
                 to: ref('dim_driver')
                 field: driver_id
+      - name: lap_time_s
+        description: Lap time in seconds. Includes slow laps behind the safety car or a red flag.

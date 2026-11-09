@@ -2,6 +2,25 @@
 
 A learning project that downloads Formula 1 data from the [Jolpica API](https://api.jolpi.ca/ergast/f1), stores the raw JSON, and transforms it with SQL in DuckDB. The cleaned data is written as Parquet files to local S3-compatible object storage, which runs in Docker. Dagster orchestrates the pipeline, and a Streamlit dashboard shows the results.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    api["Jolpica API<br/>500 requests/hour"] -->|"jolpica.py<br/>7.2 s per request"| raw["data/raw/<br/>JSON per season and round"]
+    raw -->|"dbt staging<br/>flatten, cast, rename"| lake[("S3 bucket f1-lake<br/>Parquet on RustFS")]
+    lake -->|"dbt marts<br/>star schema + tests"| marts[("DuckDB f1.duckdb<br/>dim_* and fct_*")]
+    seed["team_lineage.csv<br/>dbt seed"] --> marts
+    marts --> dash["Streamlit dashboard<br/>localhost:8501"]
+    marts --> analyses["sql/analyses"]
+
+    subgraph dagster ["Dagster, localhost:3000: weekly schedule, one partition per season, retries"]
+        raw
+        lake
+        seed
+        marts
+    end
+```
+
 ## Installation
 
 You need **Git**, **Python 3.12 or newer** and **Docker** (with Docker Compose). Everything else is installed into a virtual environment inside the project folder, or runs in a container.

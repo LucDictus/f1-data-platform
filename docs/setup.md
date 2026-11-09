@@ -76,7 +76,7 @@ Open `.env` and fill in both values: a username and a password you make up. They
 docker compose up -d --build
 ```
 
-This starts four containers:
+This starts four containers. Their ports are bound to `127.0.0.1`, so only your own machine can reach them, not others on the same network:
 
 | Container | What it does |
 |---|---|

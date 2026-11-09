@@ -23,4 +23,4 @@ jobs:
           F1_DATA_DIR: tests/fixtures/data
         run: |
           mkdir -p tests/fixtures/data/lake
-          dbt build --project-dir transform --profiles-dir transform --target ci --exclude season_completeness_dim_race
+          dbt build --project-dir transform --profiles-dir transform --target ci

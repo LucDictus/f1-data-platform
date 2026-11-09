@@ -96,7 +96,7 @@ Open http://localhost:3000:
 
 To rebuild only the dbt models, without downloading, select the `staging/` and `marts/` assets and click **Materialize selected**. Never start a download in Dagster while the download script is running in a terminal: together they exceed the API limit of 500 requests per hour.
 
-Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_completeness_dim_race` fails if a season from 2018 to now has no races.
+Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_completeness_dim_race` fails if a season between the first and the latest loaded season has no races. It stops at the latest season with races, so it also passes between New Year and the first race of a new season.
 
 ## Dashboard
 
@@ -143,7 +143,5 @@ mkdir -p tests/fixtures/data/lake
 ```
 
 ```bash
-F1_DATA_DIR=tests/fixtures/data dbt build --project-dir transform --profiles-dir transform --target ci --exclude season_completeness_dim_race
+F1_DATA_DIR=tests/fixtures/data dbt build --project-dir transform --profiles-dir transform --target ci
 ```
-
-The completeness test is left out because the fixture data holds one season, not all of them.

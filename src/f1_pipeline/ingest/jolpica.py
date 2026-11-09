@@ -1,17 +1,21 @@
 import argparse
 import json
+import os
 import time
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import requests
 
 BASE_URL = "https://api.jolpi.ca/ergast/f1"
-RAW_DIR = Path("data/raw")
+# Same data folder as dbt and the dashboard read from.
+RAW_DIR = Path(os.environ.get("F1_DATA_DIR", "data")) / "raw"
 
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 REQUEST_INTERVAL = 3600 / 500  # Jolpica allows 500 requests per hour without a token
+FIRST_SEASON = 2018
 CURRENT_SEASON = datetime.now().year
+SETTLE_DAYS = 7  # a race's data no longer changes this long after the race
 
 ROUND_ENDPOINTS = ["pitstops", "laps"]
 
@@ -40,34 +44,35 @@ def fetch_all(session: requests.Session, path: str, limit: int = 100) -> list[di
             return pages
 
 
-def save_raw(season: int, endpoint: str, pages: list[dict]) -> Path:
-    out = RAW_DIR / endpoint / f"season={season}" / "data.json"
+def raw_path(season: int, endpoint: str, round_: int | None = None) -> Path:
+    path = RAW_DIR / endpoint / f"season={season}"
+    if round_ is not None:
+        path /= f"round={round_:02d}"
+    return path / "data.json"
+
+
+def save_raw(season: int, endpoint: str, pages: list[dict], round_: int | None = None) -> Path:
+    out = raw_path(season, endpoint, round_)
     out.parent.mkdir(parents=True, exist_ok=True)
     # Idempotency: use a deterministic file path and overwrite existing data
     # instead of appending, so repeated ingestion does not create duplicates.
-    out.write_text(json.dumps(pages))
-    return out
-
-
-def get_rounds(session: requests.Session, season: int) -> list[int]:
-    pages = fetch_all(session, f"{season}/races")
-    races = [r for page in pages for r in page["MRData"]["RaceTable"]["Races"]]
-    return [int(r["round"]) for r in races]
-
-
-def save_raw_round(season: int, endpoint: str, round_: int, pages: list[dict]) -> Path:
-    out = RAW_DIR / endpoint / f"season={season}" / f"round={round_:02d}" / "data.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(pages))
+    # Write to a temp file and rename it: a rename is all or nothing, so a crash
+    # mid-write never leaves a half file that later runs would skip.
+    tmp = out.with_suffix(".tmp")
+    tmp.write_text(json.dumps(pages))
+    tmp.replace(out)
     return out
 
 
 def raw_exists(season: int, endpoint: str, round_: int | None = None) -> bool:
-    if round_ is None:
-        path = RAW_DIR / endpoint / f"season={season}" / "data.json"
-    else:
-        path = RAW_DIR / endpoint / f"season={season}" / f"round={round_:02d}" / "data.json"
-    return path.exists()
+    return raw_path(season, endpoint, round_).exists()
+
+
+def get_rounds(session: requests.Session, season: int) -> list[tuple[int, date]]:
+    """Return (round, race date) for every race on the season's calendar."""
+    pages = fetch_all(session, f"{season}/races")
+    races = [r for page in pages for r in page["MRData"]["RaceTable"]["Races"]]
+    return [(int(r["round"]), date.fromisoformat(r["date"])) for r in races]
 
 
 def parse_args():
@@ -78,38 +83,38 @@ def parse_args():
     group.add_argument(
         "--season",
         type=int,
-        help=f"Load a single season ({2018}-{CURRENT_SEASON})",
+        help=f"Load a single season ({FIRST_SEASON}-{CURRENT_SEASON})",
     )
 
     group.add_argument(
         "--from",
         dest="start_season",
         type=int,
-        help=f"First season to load ({2018}-{CURRENT_SEASON})",
+        help=f"First season to load ({FIRST_SEASON}-{CURRENT_SEASON})",
     )
 
     parser.add_argument(
         "--to",
         dest="end_season",
         type=int,
-        help=f"Last season to load ({2018}-{CURRENT_SEASON})",
+        help=f"Last season to load ({FIRST_SEASON}-{CURRENT_SEASON})",
     )
 
     args = parser.parse_args()
 
     if args.season is not None:
-        if not 2018 <= args.season <= CURRENT_SEASON:
-            parser.error(f"--season must be between 2018 and {CURRENT_SEASON}")
+        if not FIRST_SEASON <= args.season <= CURRENT_SEASON:
+            parser.error(f"--season must be between {FIRST_SEASON} and {CURRENT_SEASON}")
         return [args.season]
 
     if args.start_season is None or args.end_season is None:
         parser.error("--from and --to must be provided together")
 
-    if not 2018 <= args.start_season <= CURRENT_SEASON:
-        parser.error(f"--from must be between 2018 and {CURRENT_SEASON}")
+    if not FIRST_SEASON <= args.start_season <= CURRENT_SEASON:
+        parser.error(f"--from must be between {FIRST_SEASON} and {CURRENT_SEASON}")
 
-    if not 2018 <= args.end_season <= CURRENT_SEASON:
-        parser.error(f"--to must be between 2018 and {CURRENT_SEASON}")
+    if not FIRST_SEASON <= args.end_season <= CURRENT_SEASON:
+        parser.error(f"--to must be between {FIRST_SEASON} and {CURRENT_SEASON}")
 
     if args.start_season > args.end_season:
         parser.error("--from cannot be greater than --to")
@@ -128,15 +133,17 @@ def ingest_season(session: requests.Session, season: int) -> None:
         pages = fetch_all(session, f"{season}/results")
         print(save_raw(season, "results", pages))
 
-    # Round-level endpoints
-    for round_ in get_rounds(session, season):
+    # Round-level endpoints: a round on disk is only fetched again while its data can still
+    # change, so the weekly refresh downloads the latest race instead of the whole season.
+    settled_before = date.today() - timedelta(days=SETTLE_DAYS)
+    for round_, race_date in get_rounds(session, season):
         for endpoint in ROUND_ENDPOINTS:
-            if raw_exists(season, endpoint, round_) and season < CURRENT_SEASON:
+            if raw_exists(season, endpoint, round_) and race_date < settled_before:
                 print(f"Skipping {season} round {round_} {endpoint} (already exists)")
                 continue
 
             pages = fetch_all(session, f"{season}/{round_}/{endpoint}")
-            print(save_raw_round(season, endpoint, round_, pages))
+            print(save_raw(season, endpoint, pages, round_))
 
 
 if __name__ == "__main__":

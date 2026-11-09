@@ -1,3 +1,5 @@
+import json
+from datetime import date, timedelta
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -142,3 +144,37 @@ def test_parse_missing_to(monkeypatch):
 
     with pytest.raises(SystemExit):
         jolpica.parse_args()
+
+
+# --- saving and skipping ------------------------------------------------------
+
+
+def test_save_raw_writes_file_without_leftover_tmp(monkeypatch, tmp_path):
+    monkeypatch.setattr(jolpica, "RAW_DIR", tmp_path)
+
+    out = jolpica.save_raw(2024, "laps", [make_page(1)], round_=3)
+
+    assert out == tmp_path / "laps" / "season=2024" / "round=03" / "data.json"
+    assert json.loads(out.read_text()) == [make_page(1)]
+    assert list(out.parent.iterdir()) == [out]
+
+
+def test_ingest_season_fetches_settled_rounds_only_once(monkeypatch, tmp_path):
+    monkeypatch.setattr(jolpica, "RAW_DIR", tmp_path)
+    old, recent = date.today() - timedelta(days=30), date.today() - timedelta(days=2)
+    monkeypatch.setattr(jolpica, "get_rounds", lambda session, season: [(1, old), (2, recent)])
+    fetched = []
+
+    def fake_fetch_all(session, path):
+        fetched.append(path)
+        return [make_page(0)]
+
+    monkeypatch.setattr(jolpica, "fetch_all", fake_fetch_all)
+    season = jolpica.CURRENT_SEASON
+
+    jolpica.ingest_season(None, season)
+    fetched.clear()
+    jolpica.ingest_season(None, season)
+
+    # Round 1 is on disk and settled; round 2 is on disk but recent, so it is fetched again.
+    assert fetched == [f"{season}/results", f"{season}/2/pitstops", f"{season}/2/laps"]

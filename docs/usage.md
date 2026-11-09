@@ -17,8 +17,8 @@ python src/f1_pipeline/ingest/jolpica.py --from 2018 --to 2025
 This downloads race results, and per race the pit stops and lap times. The JSON files are written to `data/raw/`, which Git ignores.
 
 - **Rate limit:** the API allows 500 requests per hour, so the script waits 7.2 seconds before every request. Lap times are large (about 12 requests per race), so a first full download of all seasons takes about 5 hours.
-- **Skipping:** past seasons that are already on disk are skipped. The current season is always downloaded again, because races are still being added.
-- **Stopping:** you can stop the script at any time. A race is only written once all its pages are in, so the next run continues where it stopped.
+- **Skipping:** a race that is already on disk is skipped once it is more than 7 days old, because its data no longer changes. Newer races, and races that have not happened yet, are downloaded again on every run. The current season's results are always downloaded again.
+- **Stopping:** you can stop the script at any time. A race is only written once all its pages are in, and each file is written to a temporary file first and then renamed, so a stop never leaves a half file. The next run continues where it stopped.
 
 ## Transforming with dbt
 
@@ -92,7 +92,7 @@ Open http://localhost:3000:
 
 - **Assets → View lineage** shows the whole graph, from the raw JSON to the marts.
 - **Materialize all** runs the pipeline now: pick one or more seasons, Dagster downloads them, then builds and tests every dbt model. Each season is a partition: **Assets → jolpica/results** shows which seasons are loaded, and a missing season can be backfilled from there.
-- **Automation → `weekly_schedule`** refreshes the current season every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while Dagster is running.
+- **Automation → `weekly_schedule`** refreshes the current season every Monday at 06:00 (Amsterdam time). Thanks to the 7-day rule above, it only downloads the latest races. Schedules start switched off, so turn it on here. It only runs while Dagster is running.
 
 To rebuild only the dbt models, without downloading, select the `staging/` and `marts/` assets and click **Materialize selected**. Never start a download in Dagster while the download script is running in a terminal: together they exceed the API limit of 500 requests per hour.
 

@@ -32,7 +32,7 @@ flowchart LR
 - **Ingests** 9 seasons (2018–2026): 193 races, with results, pit stops and 212,650 lap times. Downloads are incremental, retried on failure, and throttled to stay within the API's rate limit.
 - **Transforms** the raw JSON with dbt: staging models written as Parquet to S3-compatible storage, and a star schema in DuckDB (`dim_race`, `dim_driver`, `dim_constructor`, `fct_race_results`, `fct_pit_stops`, `fct_lap_times`).
 - **Tests** the data with 29 dbt tests: unique keys, foreign keys, completeness of every season, and a lineage entry for every team.
-- **Orchestrates** everything with Dagster: one partition per season, a weekly refresh of the current season, and the dbt models as assets in the same graph.
+- **Orchestrates** everything with Dagster: one partition per season, a weekly refresh that only downloads the latest races, and the dbt models as assets in the same graph.
 - **Shows** the results in a Streamlit dashboard: points per team over the seasons, average pit stops per team, and lap times per driver in one race.
 - **Checks** every pull request in CI: linting, unit tests, and a full `dbt build` on a small set of real data.
 

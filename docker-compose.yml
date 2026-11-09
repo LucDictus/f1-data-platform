@@ -16,5 +16,13 @@ services:
     entrypoint: >
       sh -c "until aws --endpoint-url http://s3:9000 s3 ls; do sleep 1; done;
              aws --endpoint-url http://s3:9000 s3 mb s3://f1-lake || true"
+  dagster:
+    build: .
+    ports: ["3000:3000"]
+    env_file: .env
+    environment:
+      S3_ENDPOINT: s3:9000
+    volumes: ["./data:/app/data"]
+    depends_on: [s3]
 volumes:
   s3-data:

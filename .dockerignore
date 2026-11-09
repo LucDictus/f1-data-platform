@@ -1,0 +1,9 @@
+.venv/
+.git/
+.env
+data/
+transform/target/
+transform/logs/
+__pycache__/
+.pytest_cache/
+.tmp_dagster_home_*/

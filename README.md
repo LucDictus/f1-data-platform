@@ -60,7 +60,7 @@ pip install -e ".[dev]"
 
 This installs `requests`, `duckdb` and `dbt-duckdb` (needed to run the pipeline) and `pytest`, `ruff` and `responses` (needed for development). `-e` means "editable": your code changes take effect without reinstalling.
 
-### 5. Start the object storage
+### 5. Start the containers
 
 The staging models are written as Parquet files to an S3 bucket. Locally that bucket lives in [RustFS](https://rustfs.com), an S3-compatible server that runs in Docker. It works the same way as AWS S3, so in the cloud only the address and the keys would change.
 
@@ -70,13 +70,23 @@ Create your own settings file from the example. Git ignores `.env`, so your keys
 cp .env.example .env
 ```
 
-Open `.env` and fill in both values: a username and a password you make up. They are only used on your own machine. Then start the storage:
+Open `.env` and fill in both values: a username and a password you make up. They are only used on your own machine. Then build and start everything:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-This starts two containers: `s3` (the storage server, on port 9000) and `createbucket`, which creates the bucket `f1-lake` and then stops. Your data is kept in a Docker volume, so it survives a restart. Stop the storage with `docker compose down`. Adding `-v` also deletes the stored data.
+This starts three containers:
+
+| Container | What it does |
+|---|---|
+| `s3` | The storage server, on port 9000. Its data is kept in a Docker volume, so it survives a restart |
+| `createbucket` | Creates the bucket `f1-lake`, then stops |
+| `dagster` | The pipeline and its web interface, on http://localhost:3000. Built from the `Dockerfile`; see [Orchestration](#orchestration-dagster) |
+
+`--build` rebuilds the `dagster` image, so your latest code changes are included. The first build takes about a minute.
+
+Stop everything with `docker compose down`. Adding `-v` also deletes the stored Parquet files. Containers don't start again by themselves after your laptop restarts, so run `docker compose up -d` again.
 
 ### 6. Check that it works
 
@@ -154,17 +164,31 @@ dbt build --project-dir transform --profiles-dir transform
 
 ## Orchestration (Dagster)
 
-Dagster runs the download and `dbt build` as one pipeline, in the right order. The pipeline is defined in `src/f1_pipeline/definitions.py`. Make sure the storage is running (`docker compose up -d`). Dagster reads `.env` by itself, so you don't need the `source .env` step here. Start the web interface from the repo root:
+Dagster runs the download and `dbt build` as one pipeline, in the right order. The pipeline is defined in `src/f1_pipeline/definitions.py`.
+
+It runs in the `dagster` container, which `docker compose up -d --build` starts (see [step 5](#5-start-the-containers)). The container gets the keys from `.env`, and reaches the storage at `s3:9000`: inside Docker, containers find each other by service name, not via `localhost`. It reads and writes your local `data/` folder, so raw data, the database and Dagster's run history (`data/dagster_home/`) stay on your laptop. Follow its log with:
+
+```bash
+docker compose logs -f dagster
+```
+
+To run Dagster outside Docker instead (for example while changing `definitions.py`), stop the container first, because both use port 3000:
+
+```bash
+docker compose stop dagster
+```
 
 ```bash
 dagster dev -m f1_pipeline.definitions
 ```
 
-Then open http://localhost:3000:
+Open http://localhost:3000:
 
 - **Assets → View lineage** shows the whole graph, from the raw JSON to the marts.
 - **Materialize all** runs the pipeline now: pick one or more seasons, Dagster downloads them, then builds and tests every dbt model. Each season is a partition: **Assets → jolpica/results** shows which seasons are loaded, and a missing season can be backfilled from there.
-- **Automation → `weekly_schedule`** refreshes the current season every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while `dagster dev` is running.
+- **Automation → `weekly_schedule`** refreshes the current season every Monday at 06:00 (Amsterdam time). Schedules start switched off, so turn it on here. It only runs while Dagster is running.
+
+To rebuild only the dbt models, without downloading, select the `staging/` and `marts/` assets and click **Materialize selected**. Never start a download in Dagster while the download script is running in a terminal: together they exceed the API limit of 500 requests per hour.
 
 Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_completeness_dim_race` fails if a season from 2018 to now has no races.
 

@@ -1,6 +1,6 @@
 # F1 Data Platform
 
-An end-to-end data platform for Formula 1 data, built as my first data engineering project. It downloads race results, pit stops and lap times from the [Jolpica API](https://github.com/jolpica/jolpica-f1), transforms them with dbt into a star schema, and shows the results in a dashboard. Everything runs locally with Docker.
+An end-to-end data platform for Formula 1 data, built as my first data engineering project. It downloads race results, sprint results, pit stops and lap times from the [Jolpica API](https://github.com/jolpica/jolpica-f1), transforms them with dbt into a star schema, and shows the results in a dashboard. Everything runs locally with Docker.
 
 ![The dashboard: points per team over the seasons, average pit stop per team, and lap times in one race](docs/images/dashboard.png)
 
@@ -29,9 +29,9 @@ flowchart LR
 
 ## What it does
 
-- **Ingests** 9 seasons (2018–2026): 193 races, with results, pit stops and 212,650 lap times. Downloads are incremental, retried on failure, and throttled to stay within the API's rate limit.
-- **Transforms** the raw JSON with dbt: staging models written as Parquet to S3-compatible storage, and a star schema in DuckDB (`dim_race`, `dim_driver`, `dim_constructor`, `fct_race_results`, `fct_pit_stops`, `fct_lap_times`).
-- **Tests** the data with 30 dbt data tests (unique keys, foreign keys, completeness of every season, a lineage entry for every team) and the time parsing with 2 dbt unit tests.
+- **Ingests** 9 seasons (2018–2026): 193 races, with results, sprint results, pit stops and 212,650 lap times. Downloads are incremental, retried on failure, and throttled to stay within the API's rate limit.
+- **Transforms** the raw JSON with dbt: staging models written as Parquet to S3-compatible storage, and a star schema in DuckDB (`dim_race`, `dim_driver`, `dim_constructor`, `fct_race_results`, `fct_sprint_results`, `fct_pit_stops`, `fct_lap_times`).
+- **Tests** the data with 37 dbt data tests (unique keys, foreign keys, completeness of every season, a lineage entry for every team, and a reconciliation of a 2024 points total with the official standings) and the time parsing with 2 dbt unit tests.
 - **Orchestrates** everything with Dagster: one partition per season, a weekly refresh that only downloads the latest races, and the dbt models as assets in the same graph.
 - **Shows** the results in a Streamlit dashboard: points per team over the seasons, average pit stops per team, and lap times per driver in one race.
 - **Checks** every pull request in CI: linting, unit tests, a full `dbt build` on a small set of real data, and a Docker build.
@@ -55,7 +55,7 @@ flowchart LR
 - **Renamed teams are one team.** Toro Rosso, AlphaTauri and RB are three IDs in the API. A dbt seed maps each ID to its team lineage, and a test fails when a new team appears that is not in the seed yet.
 - **Incremental where the volume is.** `fct_lap_times` holds over 200,000 rows, so it only adds new races instead of rebuilding everything.
 - **MinIO stopped publishing free Docker images** while I was building the storage layer. I switched to RustFS, which speaks the same S3 API, so only the Docker image changed.
-- **dbt in CI without the real data.** CI has no data and no S3, so it runs `dbt build` on one season of real data stored in `tests/fixtures/`, with a separate dbt target that writes Parquet locally.
+- **dbt in CI without the real data.** CI has no data and no S3, so it runs `dbt build` on the 2024 season of real data stored in `tests/fixtures/`, with a separate dbt target that writes Parquet locally.
 
 ## Quick start
 

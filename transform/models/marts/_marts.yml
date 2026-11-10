@@ -53,7 +53,7 @@ models:
       - name: grid
         description: Starting position. 0 means a start from the pit lane.
       - name: points
-        description: Points from the Grand Prix itself. Sprint races are not included.
+        description: Points from the Grand Prix itself. Sprint points are in fct_sprint_results.
 
   - name: fct_sprint_results
     description: One row per driver per sprint.

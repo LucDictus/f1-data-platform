@@ -2,7 +2,7 @@
 .env
 dump/
 .venv/
-data/
+/data/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

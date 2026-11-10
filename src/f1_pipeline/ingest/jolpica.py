@@ -17,6 +17,7 @@ FIRST_SEASON = 2018
 CURRENT_SEASON = datetime.now().year
 SETTLE_DAYS = 7  # a race's data no longer changes this long after the race
 
+SEASON_ENDPOINTS = ["results", "sprint"]
 ROUND_ENDPOINTS = ["pitstops", "laps"]
 
 
@@ -127,11 +128,13 @@ def ingest_season(session: requests.Session, season: int) -> None:
     print(f"\nLoading season {season}...")
 
     # Season-level endpoints
-    if raw_exists(season, "results") and season < CURRENT_SEASON:
-        print(f"Skipping {season} results (already exists)")
-    else:
-        pages = fetch_all(session, f"{season}/results")
-        print(save_raw(season, "results", pages))
+    for endpoint in SEASON_ENDPOINTS:
+        if raw_exists(season, endpoint) and season < CURRENT_SEASON:
+            print(f"Skipping {season} {endpoint} (already exists)")
+            continue
+
+        pages = fetch_all(session, f"{season}/{endpoint}")
+        print(save_raw(season, endpoint, pages))
 
     # Round-level endpoints: a round on disk is only fetched again while its data can still
     # change, so the weekly refresh downloads the latest race instead of the whole season.

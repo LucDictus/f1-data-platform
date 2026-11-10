@@ -177,4 +177,9 @@ def test_ingest_season_fetches_settled_rounds_only_once(monkeypatch, tmp_path):
     jolpica.ingest_season(None, season)
 
     # Round 1 is on disk and settled; round 2 is on disk but recent, so it is fetched again.
-    assert fetched == [f"{season}/results", f"{season}/2/pitstops", f"{season}/2/laps"]
+    assert fetched == [
+        f"{season}/results",
+        f"{season}/sprint",
+        f"{season}/2/pitstops",
+        f"{season}/2/laps",
+    ]

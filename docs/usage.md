@@ -102,7 +102,7 @@ Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_com
 
 `dashboard/app.py` is a [Streamlit](https://streamlit.io) app that reads the marts from `data/f1.duckdb`. It shows:
 
-- points per team per season, using `team_lineage`, so renamed teams stay one line. Only Grand Prix points count: sprint races are not downloaded, so totals are lower than the official standings
+- points per team per season, using `team_lineage`, so renamed teams stay one line. Grand Prix and sprint points together, matching the official standings
 - the average pit stop per team, for the season you pick. Stops over 60 seconds (`is_long_stop` in `fct_pit_stops`: cars waiting in the pit lane during a red flag) are left out
 - lap times per driver in one race. Laps slower than 1.2 × the race median (safety car, red flag) are left out, so the chart doesn't flatten
 

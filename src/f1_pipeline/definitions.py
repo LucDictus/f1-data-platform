@@ -24,6 +24,7 @@ season_partitions = dg.StaticPartitionsDefinition(
         dg.AssetSpec(["jolpica", "results"]),
         dg.AssetSpec(["jolpica", "pitstops"]),
         dg.AssetSpec(["jolpica", "laps"]),
+        dg.AssetSpec(["jolpica", "sprint"]),
     ],
     partitions_def=season_partitions,
     retry_policy=dg.RetryPolicy(max_retries=3, delay=30),
@@ -35,6 +36,7 @@ def raw_jolpica(context: dg.AssetExecutionContext):
     yield dg.MaterializeResult(asset_key=["jolpica", "results"])
     yield dg.MaterializeResult(asset_key=["jolpica", "pitstops"])
     yield dg.MaterializeResult(asset_key=["jolpica", "laps"])
+    yield dg.MaterializeResult(asset_key=["jolpica", "sprint"])
 
 
 @dbt_assets(manifest=project.manifest_path)

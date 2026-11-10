@@ -18,7 +18,11 @@ st.title("F1 Data Platform")
 st.header("Points per team")
 points = query("""
     SELECT r.season::VARCHAR AS season, c.team_lineage AS team, SUM(r.points) AS points
-    FROM marts.fct_race_results AS r
+    FROM (
+        SELECT season, constructor_id, points FROM marts.fct_race_results
+        UNION ALL
+        SELECT season, constructor_id, points FROM marts.fct_sprint_results
+    ) AS r
     JOIN marts.dim_constructor AS c ON r.constructor_id = c.constructor_id
     GROUP BY ALL
     ORDER BY season

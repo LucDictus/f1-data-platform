@@ -14,7 +14,7 @@ python src/f1_pipeline/ingest/jolpica.py --season 2024
 python src/f1_pipeline/ingest/jolpica.py --from 2018 --to 2025
 ```
 
-This downloads race results, and per race the pit stops and lap times. The JSON files are written to `data/raw/`, which Git ignores.
+This downloads race results and sprint results per season, and per race the pit stops and lap times. The JSON files are written to `data/raw/`, which Git ignores.
 
 - **Rate limit:** the API allows 500 requests per hour, so the script waits 7.2 seconds before every request. Lap times are large (about 12 requests per race), so a first full download of all seasons takes about 5 hours.
 - **Skipping:** a race that is already on disk is skipped once it is more than 7 days old, because its data no longer changes. Newer races, and races that have not happened yet, are downloaded again on every run. The current season's results are always downloaded again.
@@ -102,7 +102,7 @@ Failed downloads are retried 3 times, 30 seconds apart. The dbt test `season_com
 
 `dashboard/app.py` is a [Streamlit](https://streamlit.io) app that reads the marts from `data/f1.duckdb`. It shows:
 
-- points per team per season, using `team_lineage`, so renamed teams stay one line. Only Grand Prix points count: sprint races are not downloaded, so totals are lower than the official standings
+- points per team per season, using `team_lineage`, so renamed teams stay one line. Grand Prix and sprint points together, matching the official standings
 - the average pit stop per team, for the season you pick. Stops over 60 seconds (`is_long_stop` in `fct_pit_stops`: cars waiting in the pit lane during a red flag) are left out
 - lap times per driver in one race. Laps slower than 1.2 × the race median (safety car, red flag) are left out, so the chart doesn't flatten
 
@@ -136,7 +136,7 @@ pytest
 
 Run `ruff format .` to fix formatting automatically.
 
-CI (`.github/workflows/ci.yml`) runs the same checks on every pull request, plus `dbt build` on a small set of real data in `tests/fixtures/data/` (one season of results, one race of pit stops and lap times). CI has no S3 storage, so it uses the `ci` target in `transform/profiles.yml`, which writes the Parquet files to a local folder. To run that step locally:
+CI (`.github/workflows/ci.yml`) runs the same checks on every pull request, plus `dbt build` on a small set of real data in `tests/fixtures/data/`: the 2024 season of results and sprint results, and one race of pit stops and lap times. 2024 has sprints, and the reconciliation test checks a 2024 total, so both run in CI too. CI has no S3 storage, so it uses the `ci` target in `transform/profiles.yml`, which writes the Parquet files to a local folder. To run that step locally:
 
 ```bash
 mkdir -p tests/fixtures/data/lake
